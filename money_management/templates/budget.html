@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Budget, Expense, and Goal Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style media="screen">
+        /* Add your styles here */
+        body {
+            background-color: #00CED1;
+            font-family: 'Poppins', sans-serif;
+            color: #000000; /* Set text color to black */
+        }
+
+        .background {
+            width: 430px;
+            height: 520px;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            left: 50%;
+            top: 50%;
+        }
+
+        .background .shape {
+            height: 200px;
+            width: 200px;
+            position: absolute;
+            border-radius: 50%;
+        }
+
+        form {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 40px rgba(8, 7, 16, 0.6);
+        }
+
+        h1 {
+            font-size: 36px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        input,
+        file {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #000000; /* Set text color to black */
+            margin-bottom: 15px;
+        }
+
+        input[type="checkbox"] {
+            margin-top: 10px;
+        }
+
+        button {
+            width: 100%;
+            background-color: #ffffff;
+            color: #080710;
+            padding: 15px 0;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .social {
+            margin-top: 30px;
+            display: flex;
+        }
+
+        .social div {
+            background: red;
+            width: 150px;
+            border-radius: 3px;
+            padding: 5px 10px 10px 5px;
+            background-color: rgba(255, 255, 255, 0.27);
+            color: #eaf0fb;
+            text-align: center;
+        }
+
+        .social div:hover {
+            background-color: rgba(255, 255, 255, 0.47);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Add this section to display messages -->
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    <!-- Expense Tracking Section -->
+    <div class="background">
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+    <form method="post" action="{% url 'add_expense' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <h1>Expense Tracking</h1>
+
+        <label for="id_category">Expense Category</label>
+        <input type="text" name="category" id="id_category" placeholder="Enter expense category">
+
+        <label for="id_amount">Expense Amount</label>
+        <input type="number" name="amount" id="id_amount" placeholder="Enter expense amount">
+
+        <label for="id_description">Expense Description</label>
+        <input type="text" name="description" id="id_description" placeholder="Enter expense description">
+
+        <label for="id_receipt">Attach Receipt</label>
+        <input type="file" name="receipt" id="id_receipt">
+
+        <label for="id_date">Expense Date</label>
+        <input type="date" name="date" id="id_date">
+
+        <button type="submit">Add Expense</button>
+    </form>
+
+    <!-- Budget Creation and Monitoring Section -->
+    <form method="post" action="{% url 'create_budget' %}" id="budgetForm">
+        {% csrf_token %}
+        <h1>Budget Creation</h1>
+    
+        <label for="id_budget_month">Budget Month</label>
+        <input type="text" name="budget_month" id="id_budget_month" placeholder="Enter budget month" required>
+    
+        <label for="id_target_budget">Target Budget</label>
+        <input type="number" name="target_budget" id="id_target_budget" placeholder="Enter target budget" required>
+    
+        <button type="submit">Create Budget</button>
+    
+        <label for="budgetMonth">Select Month:</label>
+        <select id="budgetMonth">
+            <!-- JavaScript will dynamically populate options here -->
+        </select>
+        <button type="button" id="showRemainingBudget">Show Remaining Budget</button>
+        <div id="remainingBudgetMessage"></div>
+        <div>
+            <p>Budget Progress</p>
+            <progress id="budgetProgressBar" value="0" max="100"></progress>
+            <p id="budgetProgressText">Budget Used up-to: 0%</p>
+            <p id="remainingBudgetText">Remaining Budget: $0.00</p>
+        </div>
+    </form>
+
+    <!-- Irregular Expense Alerts/Reports Section -->
+    <div class="social" id="irregularExpenseAlert">
+        <div class="fb">
+            <i class="fas fa-bell"></i> Irregular Expense Alerts
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('showRemainingBudget').addEventListener('click', function () {
+            const selectedMonth = document.getElementById('budgetMonth').value;
+    
+            fetch(`/show_remaining_budget/${selectedMonth}/`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('remainingBudgetMessage').innerText = '';
+                    document.getElementById('id_budget_month').value = data.budget_month;
+                    document.getElementById('id_target_budget').value = data.target_budget;
+    
+                    const remainingBudget = parseFloat(data.remaining_budget);
+                    const targetBudget = parseFloat(data.target_budget);
+    
+                    if (!isNaN(remainingBudget) && !isNaN(targetBudget) && targetBudget > 0) {
+                        const usedBudget = targetBudget - remainingBudget;
+                        const percentageUsed = (usedBudget / targetBudget) * 100;
+    
+                        document.getElementById('budgetProgressBar').value = percentageUsed;
+                        document.getElementById('remainingBudgetText').innerText = `Remaining Budget: $${remainingBudget.toFixed(2)}`;
+    
+                        // Display the percentage of used budget
+                        const budgetProgressText = `Budget Used up-to: ${percentageUsed.toFixed(2)}%`;
+                        document.getElementById('budgetProgressText').innerText = budgetProgressText;
+    
+                        // Check if remaining budget is negative
+                        if (remainingBudget < 0) {
+                            document.getElementById('remainingBudgetText').innerText = `Remaining Budget: $${remainingBudget.toFixed(2)}`;
+                            
+                            // Show the irregular expense alert
+                            document.getElementById('irregularExpenseAlert').style.display = 'flex';
+                            
+                            // Notify the user
+                            alert('You have gone over budget!');
+                        } else {
+                            // Hide the irregular expense alert if budget is not negative
+                            document.getElementById('irregularExpenseAlert').style.display = 'none';
+                        }
+                    } else {
+                        document.getElementById('budgetProgressBar').value = 0;
+                        document.getElementById('remainingBudgetText').innerText = 'Remaining Budget: N/A';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    document.getElementById('remainingBudgetMessage').innerText = 'Error fetching data';
+                });
+        });
+
+        // Dynamically populate the month dropdown with a range of months
+        const monthDropdown = document.getElementById('budgetMonth');
+        for (let month = 1; month <= 12; month++) {
+            const option = document.createElement('option');
+            const monthString = String(month).padStart(2, '0');
+            option.value = monthString;
+            option.text = monthString;
+            monthDropdown.add(option);
+        }
+
+        // Prevent the form submission when the "Show Remaining Budget" button is clicked
+        document.getElementById('budgetForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+        });
+    </script>
+</body>
+
+</html>
