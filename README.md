@@ -24,5 +24,10 @@ A Django‑based personal‑finance platform that helps users **track bills and 
 - **Auth & Security** · Django User Model, email verification, hashed passwords  
 - **Team Workflow** · GitHub collaboration with feature‑branch workflow and peer code reviews
 
+---
+
+## 📄 Project Report
+
+You can find the full project report and documentation [here](https://docs.google.com/document/d/1GmajOpCzZhj8-9A1zaXHqhOgOLyb7y2D/edit?usp=sharing&ouid=106914916360669866026&rtpof=true&sd=true).
 
 
